@@ -13,7 +13,7 @@ export const Footer = () => {
           target="_blank"
           fontWeight={'semibold'}
         >
-          issues/new/choose
+          Report Bug
         </Text>{' '}
         | Made with <span style={{ color: '#e25555' }}>&#9829;</span> by{' '}
         <Text
