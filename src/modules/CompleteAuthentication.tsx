@@ -201,7 +201,7 @@ const StartOnboarding = ({ nextStep }: { nextStep: Function }) => {
       <VStack w="100%">
         <Heading size="lg">Welcome 👋</Heading>
         <Text color="GrayText" fontSize={'sm'} w="90%" textAlign={'center'}>
-          LeetSync is a Chrome extension that syncs your submissions to GitHub. Setup now.
+          GitLeet is a Chrome extension that syncs your submissions to GitHub. Setup now.
         </Text>
       </VStack>
 

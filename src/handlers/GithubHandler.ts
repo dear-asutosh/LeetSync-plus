@@ -25,10 +25,15 @@ interface TrackingData {
   entries: ProblemEntry[];
 }
 
-const TRACKING_START = '<!-- LEETSYNC_TRACKING_START -->';
-const TRACKING_END = '<!-- LEETSYNC_TRACKING_END -->';
-const DATA_START = '<!-- LEETSYNC_DATA';
-const DATA_END = 'LEETSYNC_DATA -->';
+const TRACKING_START = '<!-- GITLEET_TRACKING_START -->';
+const TRACKING_END = '<!-- GITLEET_TRACKING_END -->';
+const DATA_START = '<!-- GITLEET_DATA';
+const DATA_END = 'GITLEET_DATA -->';
+
+const OLD_TRACKING_START = '<!-- LEETSYNC_TRACKING_START -->';
+const OLD_TRACKING_END = '<!-- LEETSYNC_TRACKING_END -->';
+const OLD_DATA_START = '<!-- LEETSYNC_DATA';
+const OLD_DATA_END = 'LEETSYNC_DATA -->';
 
 const languagesToExtensions: Record<string, string> = {
   Python: '.py',
@@ -313,7 +318,7 @@ export default class GithubHandler {
     //if it doesn't, create a new file with the content
     const msg = `Time: ${stats.runtimeDisplay} (${stats.runtimePercentile.toFixed(2)}%) | Memory: ${
       stats.memoryDisplay
-    } (${stats.memoryPercentile.toFixed(2)}%) - LeetSync`;
+    } (${stats.memoryPercentile.toFixed(2)}%) - GitLeet`;
     await this.upload(path, `${problemName}${lang}`, code, msg);
   }
 
@@ -409,12 +414,18 @@ export default class GithubHandler {
    * Parses the hidden JSON data block from the README tracking section.
    */
   parseTrackingData(readmeContent: string): TrackingData | null {
-    const dataStartIdx = readmeContent.indexOf(DATA_START);
-    const dataEndIdx = readmeContent.indexOf(DATA_END);
+    let dataStartIdx = readmeContent.indexOf(DATA_START);
+    let dataEndIdx = readmeContent.indexOf(DATA_END);
+    let isOld = false;
+    if (dataStartIdx === -1 || dataEndIdx === -1) {
+      dataStartIdx = readmeContent.indexOf(OLD_DATA_START);
+      dataEndIdx = readmeContent.indexOf(OLD_DATA_END);
+      isOld = true;
+    }
     if (dataStartIdx === -1 || dataEndIdx === -1) return null;
 
     try {
-      const jsonStr = readmeContent.substring(dataStartIdx + DATA_START.length, dataEndIdx).trim();
+      const jsonStr = readmeContent.substring(dataStartIdx + (isOld ? OLD_DATA_START.length : DATA_START.length), dataEndIdx).trim();
       return JSON.parse(jsonStr) as TrackingData;
     } catch {
       return null;
@@ -651,22 +662,31 @@ export default class GithubHandler {
       const trackingMarkdown = this.generateDashboardMarkdown(trackingData);
 
       // Splice it into the README
-      const startIdx = readmeContent.indexOf(TRACKING_START);
-      const endIdx = readmeContent.indexOf(TRACKING_END);
+      let startIdx = readmeContent.indexOf(TRACKING_START);
+      let endIdx = readmeContent.indexOf(TRACKING_END);
+      let usingOldMarkers = false;
+
+      if (startIdx === -1 || endIdx === -1) {
+        startIdx = readmeContent.indexOf(OLD_TRACKING_START);
+        endIdx = readmeContent.indexOf(OLD_TRACKING_END);
+        if (startIdx !== -1 && endIdx !== -1) {
+          usingOldMarkers = true;
+        }
+      }
 
       if (startIdx !== -1 && endIdx !== -1) {
         // Replace existing tracking section
         readmeContent =
           readmeContent.substring(0, startIdx) +
           trackingMarkdown +
-          readmeContent.substring(endIdx + TRACKING_END.length);
+          readmeContent.substring(endIdx + (usingOldMarkers ? OLD_TRACKING_END.length : TRACKING_END.length));
       } else {
         // Append tracking section at the bottom
         readmeContent = readmeContent.trimEnd() + '\n\n' + trackingMarkdown + '\n';
       }
 
       // Commit the updated README
-      const commitMsg = `Updated README - Solved ${problemInfo.title} on ${this.formatDate(todayStr)} 🎯 - LeetSync`;
+      const commitMsg = `Updated README - Solved ${problemInfo.title} on ${this.formatDate(todayStr)} 🎯 - GitLeet`;
 
       // Use the upload method (handles create/update via SHA)
       await this.upload(rootPath, 'README.md', readmeContent, commitMsg);
