@@ -13,7 +13,7 @@ export const Footer = () => {
           target="_blank"
           fontWeight={'semibold'}
         >
-          Report Bug
+          issues/new/choose
         </Text>{' '}
         | Made with <span style={{ color: '#e25555' }}>&#9829;</span> by{' '}
         <Text
@@ -24,7 +24,7 @@ export const Footer = () => {
           fontWeight={'semibold'}
           display="inline-block"
         >
-          @dear-asutosh
+          Asutosh
         </Text>
       </Text>
     </HStack>
