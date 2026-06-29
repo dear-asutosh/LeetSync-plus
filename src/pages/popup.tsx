@@ -130,7 +130,8 @@ const PopupPage: React.FC<PopupProps> = () => {
       paddingTop={'50px'}
       paddingBottom={'25px'}
       border="1px solid"
-      borderColor={'gray.200'}
+      borderColor={'gray.700'}
+      bg="gray.800"
       borderRadius={'lg'}
       boxShadow={'md'}
       pos="relative"

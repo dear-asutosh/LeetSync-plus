@@ -8,11 +8,11 @@
     "default_title": "GitLeet"
   },
   "icons": {
-    "16": "logo192.png",
-    "48": "logo192.png",
-    "128": "logo192.png",
-    "256": "logo256.png",
-    "512": "logo512.png"
+    "16": "logo 128.png",
+    "48": "logo 128.png",
+    "128": "logo 128.png",
+    "256": "logo.png",
+    "512": "logo.png"
   },
   "permissions": ["tabs", "storage", "cookies", "unlimitedStorage", "webRequest"],
   "host_permissions": ["https://leetcode.com/*"],

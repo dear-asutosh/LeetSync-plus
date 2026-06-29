@@ -9,7 +9,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       () => {
         setTimeout(() => {
           chrome.action.setIcon({
-            path: '../../logo96.png',
+            path: '../../logo 128.png',
           });
         }, 5000);
       },

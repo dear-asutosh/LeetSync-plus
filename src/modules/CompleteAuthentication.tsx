@@ -61,7 +61,7 @@ const AuthorizeWithGithub = ({ nextStep }: { nextStep: Function }) => {
         leftIcon={<BsGithub />}
         color="whiteAlpha.900"
         border={'1px solid'}
-        borderColor={'gray.200'}
+        borderColor={'gray.700'}
         _hover={{ bg: 'blackAlpha.700' }}
         onClick={handleClicked}
       >

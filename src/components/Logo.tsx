@@ -1,6 +1,5 @@
 import { Image, ImageProps } from '@chakra-ui/react';
 import React from 'react';
-import logo from '../assets/wide-logo.png';
 
 interface LogoProps {
   logoProps?: ImageProps;
@@ -9,10 +8,10 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({ logoProps }) => {
   return (
     <Image
-      src={logo}
+      src="logo.png"
       alt="GitLeet"
       {...logoProps}
-      maxW="160px"
+      maxW="120px"
       borderRadius={'50%'}
       boxShadow={'dark-lg'}
       mb={'0.5rem'}

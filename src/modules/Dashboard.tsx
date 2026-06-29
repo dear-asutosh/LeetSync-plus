@@ -119,7 +119,8 @@ const Dashboard: React.FC<DashboardProps> = ({}) => {
       h="fit-content"
       paddingY={'25px'}
       border="1px solid"
-      borderColor={'gray.200'}
+      borderColor={'gray.700'}
+      bg="gray.800"
       borderRadius={'lg'}
       boxShadow={'md'}
       pos="relative"
@@ -165,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({}) => {
                 />
               </Tooltip>
             </HStack>
-            <Text color="gray.600" fontSize={'sm'}>
+            <Text color="gray.400" fontSize={'sm'}>
               {!solvedProblemsToday
                 ? 'Do one more, and keep up the streak!'
                 : generateTitle(streak)[1]}
