@@ -19,6 +19,7 @@ export class Question {
   content: string;
   likes: number;
   dislikes: number;
+  topicTags?: { name: string; id: string; slug: string }[];
 }
 export class QuestionsCount {
   difficulty: QuestionDifficulty | 'All';
