@@ -19,7 +19,7 @@ GitLeet utilizes the LeetCode API to fetch your submission data and the GitHub A
 
 To install GitLeet, follow these steps to sideload the extension:
 
-1. **Download the Extension:** Go to the [GitLeet Releases](https://github.com/dear-asutosh/GitLeet/releases) page on GitHub and download the latest `GitLeet-v*.zip` file.
+1. **Download the Extension:** Download the [Latest GitLeet Extension ZIP](https://github.com/dear-asutosh/GitLeet/releases/latest/download/GitLeet.zip) directly.
 2. **Extract the ZIP:** Extract the downloaded `.zip` file to a folder on your local computer.
 3. **Open Chrome Extensions:** Open Google Chrome and navigate to `chrome://extensions/` by typing it in the address bar.
 4. **Enable Developer Mode:** Turn on the **Developer mode** toggle switch in the top-right corner of the Extensions page.

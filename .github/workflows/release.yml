@@ -44,13 +44,13 @@ jobs:
       - name: Zip Build Output
         run: |
           cd build
-          zip -r ../GitLeet-${{ github.ref_name }}.zip *
+          zip -r ../GitLeet.zip *
           cd ..
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: GitLeet-${{ github.ref_name }}.zip
+          files: GitLeet.zip
           draft: false
           prerelease: false
         env:
