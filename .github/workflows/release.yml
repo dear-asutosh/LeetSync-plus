@@ -28,6 +28,8 @@ jobs:
 
       - name: Build Extension
         run: npm run build
+        env:
+          CI: false
 
       - name: Zip Build Output
         run: |
