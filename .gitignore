@@ -5,3 +5,6 @@ dist
 build
 .env
 src/config.production.js
+*.pem
+*.crx
+*.zip
