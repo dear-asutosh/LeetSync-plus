@@ -26,6 +26,16 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Generate Config File
+        run: |
+          cat <<EOF > src/config.production.js
+          module.exports = {
+            GITHUB_CLIENT_ID: '${{ secrets.EXT_GITHUB_CLIENT_ID }}',
+            GITHUB_CLIENT_SECRET: '${{ secrets.EXT_GITHUB_CLIENT_SECRET }}',
+            GITHUB_REDIRECT_URI: '${{ secrets.EXT_GITHUB_REDIRECT_URI }}',
+          };
+          EOF
+
       - name: Build Extension
         run: npm run build
         env:
