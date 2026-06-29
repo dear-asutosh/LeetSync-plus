@@ -7,6 +7,29 @@ type DistributionType = {
   value: number;
 };
 
+/* ── Tracking Data Types ── */
+interface ProblemEntry {
+  id: string;
+  date: string;
+  title: string;
+  slug: string;
+  topics: string[];
+  difficulty: string;
+  solutionPath: string;
+}
+
+interface TrackingData {
+  goal: number;
+  startDate: string;
+  previousCount: { total: number; easy: number; medium: number; hard: number };
+  entries: ProblemEntry[];
+}
+
+const TRACKING_START = '<!-- LEETSYNC_TRACKING_START -->';
+const TRACKING_END = '<!-- LEETSYNC_TRACKING_END -->';
+const DATA_START = '<!-- LEETSYNC_DATA';
+const DATA_END = 'LEETSYNC_DATA -->';
+
 const languagesToExtensions: Record<string, string> = {
   Python: '.py',
   Python3: '.py',
@@ -294,6 +317,366 @@ export default class GithubHandler {
     await this.upload(path, `${problemName}${lang}`, code, msg);
   }
 
+  /* ── Dashboard & Tracking Methods ── */
+
+  /**
+   * Fetches the raw text content and SHA of a file from the GitHub repo.
+   */
+  async fetchFileContent(
+    path: string,
+    fileName: string,
+  ): Promise<{ content: string; sha: string } | null> {
+    const url = `https://api.github.com/repos/${this.username}/${this.repo}/contents/${path}/${fileName}`;
+    const result = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((x) => x.json())
+      .catch((err) => {
+        console.log(err);
+        return null;
+      });
+
+    if (!result || result.message === 'Not Found') return null;
+
+    try {
+      const decoded = decodeURIComponent(escape(atob(result.content)));
+      return { content: decoded, sha: result.sha };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Lists directory contents at a given path in the repo.
+   */
+  async getRepoContents(path: string = ''): Promise<any[]> {
+    const url = `https://api.github.com/repos/${this.username}/${this.repo}/contents/${path}`;
+    const result = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((x) => x.json())
+      .catch(() => []);
+
+    if (!Array.isArray(result)) return [];
+    return result;
+  }
+
+  /**
+   * Scans existing problem folders to count previously solved problems.
+   * Only called on the first run when no tracking section exists yet.
+   */
+  async countExistingProblems(): Promise<{
+    total: number;
+    easy: number;
+    medium: number;
+    hard: number;
+  }> {
+    const counts = { total: 0, easy: 0, medium: 0, hard: 0 };
+    try {
+      const basePath = this.github_leetsync_subdirectory || '';
+      const contents = await this.getRepoContents(basePath);
+      const problemFolders = contents.filter(
+        (item: any) => item.type === 'dir' && /^\d+-.+/.test(item.name),
+      );
+
+      for (const folder of problemFolders) {
+        const readmePath = basePath ? `${basePath}/${folder.name}` : folder.name;
+        const readme = await this.fetchFileContent(readmePath, 'README.md');
+        if (readme) {
+          counts.total++;
+          const diffMatch = readme.content.match(/Difficulty-(Easy|Medium|Hard)/i);
+          if (diffMatch) {
+            const diff = diffMatch[1].toLowerCase() as 'easy' | 'medium' | 'hard';
+            counts[diff]++;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Error counting existing problems:', e);
+    }
+    return counts;
+  }
+
+  /**
+   * Parses the hidden JSON data block from the README tracking section.
+   */
+  parseTrackingData(readmeContent: string): TrackingData | null {
+    const dataStartIdx = readmeContent.indexOf(DATA_START);
+    const dataEndIdx = readmeContent.indexOf(DATA_END);
+    if (dataStartIdx === -1 || dataEndIdx === -1) return null;
+
+    try {
+      const jsonStr = readmeContent.substring(dataStartIdx + DATA_START.length, dataEndIdx).trim();
+      return JSON.parse(jsonStr) as TrackingData;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Computes current and longest streaks from the list of problem entries.
+   */
+  computeStreaks(entries: ProblemEntry[]): { current: number; longest: number } {
+    if (entries.length === 0) return { current: 0, longest: 0 };
+
+    // Get unique sorted dates (newest first)
+    const allDates = entries.map((e) => e.date);
+    const uniqueDates = allDates.filter((d, i) => allDates.indexOf(d) === i).sort(
+      (a, b) => new Date(b).getTime() - new Date(a).getTime(),
+    );
+
+    // Compute current streak (consecutive days ending today or yesterday)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let currentStreak = 0;
+    const mostRecentDate = new Date(uniqueDates[0]);
+    mostRecentDate.setHours(0, 0, 0, 0);
+    const daysSinceLastSolve = Math.floor(
+      (today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (daysSinceLastSolve <= 1) {
+      // Start counting from the most recent date
+      currentStreak = 1;
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const prevDate = new Date(uniqueDates[i - 1]);
+        const currDate = new Date(uniqueDates[i]);
+        const diff = Math.floor(
+          (prevDate.getTime() - currDate.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        if (diff === 1) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Compute longest streak
+    const sortedAsc = [...uniqueDates].sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
+    let longestStreak = 1;
+    let tempStreak = 1;
+    for (let i = 1; i < sortedAsc.length; i++) {
+      const prevDate = new Date(sortedAsc[i - 1]);
+      const currDate = new Date(sortedAsc[i]);
+      const diff = Math.floor(
+        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      if (diff === 1) {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else {
+        tempStreak = 1;
+      }
+    }
+
+    return { current: currentStreak, longest: longestStreak };
+  }
+
+  /**
+   * Formats a date string as "DD Mon YYYY" (e.g., "24 Jun 2026").
+   */
+  formatDate(dateStr: string): string {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const d = new Date(dateStr);
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  /**
+   * Returns the emoji prefix for a difficulty level.
+   */
+  getDifficultyEmoji(difficulty: string): string {
+    switch (difficulty) {
+      case 'Easy':
+        return '🟢';
+      case 'Medium':
+        return '🟡';
+      case 'Hard':
+        return '🔴';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Generates the full dashboard + table markdown from tracking data.
+   */
+  generateDashboardMarkdown(data: TrackingData): string {
+    const { entries, previousCount, goal, startDate } = data;
+
+    // Compute totals: previous counts + tracked entries
+    const entryCounts = { easy: 0, medium: 0, hard: 0 };
+    for (const e of entries) {
+      const diff = e.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard';
+      if (entryCounts[diff] !== undefined) entryCounts[diff]++;
+    }
+
+    const totalEasy = previousCount.easy + entryCounts.easy;
+    const totalMedium = previousCount.medium + entryCounts.medium;
+    const totalHard = previousCount.hard + entryCounts.hard;
+    const totalSolved = totalEasy + totalMedium + totalHard;
+    const progress = goal > 0 ? ((totalSolved / goal) * 100).toFixed(1) : '0.0';
+
+    const streaks = this.computeStreaks(entries);
+
+    // Build the markdown
+    let md = '';
+    md += `${TRACKING_START}\n\n`;
+
+    // Dashboard
+    md += `## 🚀 LeetCode Journey Dashboard\n\n`;
+    md += `| 📈 Total Solved | 🟢 Easy | 🟡 Medium | 🔴 Hard |\n`;
+    md += `|:---:|:---:|:---:|:---:|\n`;
+    md += `| **${totalSolved}** | **${totalEasy}** | **${totalMedium}** | **${totalHard}** |\n\n`;
+
+    md += `| 🔥 Current Streak | 🏆 Longest Streak | 📅 Started | 🎯 Goal | 📊 Progress |\n`;
+    md += `|:---:|:---:|:---:|:---:|:---:|\n`;
+    md += `| **${streaks.current} day${streaks.current !== 1 ? 's' : ''}** `;
+    md += `| **${streaks.longest} day${streaks.longest !== 1 ? 's' : ''}** `;
+    md += `| **${this.formatDate(startDate)}** `;
+    md += `| **${goal} problems** `;
+    md += `| **${progress}%** |\n\n`;
+
+    md += `---\n\n`;
+
+    // Problem table
+    md += `## 📋 Problems Solved\n\n`;
+
+    if (entries.length === 0) {
+      md += `_No problems tracked yet. Solve a problem on LeetCode to get started!_\n\n`;
+    } else {
+      md += `| # | Date | Problem | Topics | Difficulty | Solution |\n`;
+      md += `|---|------|---------|--------|------------|----------|\n`;
+
+      // Entries are stored newest-first
+      entries.forEach((entry, index) => {
+        const num = entries.length - index;
+        const topicBadges = entry.topics.length
+          ? entry.topics.map((t) => `\`${t}\``).join(' ')
+          : '_—_';
+        const emoji = this.getDifficultyEmoji(entry.difficulty);
+        md += `| ${num} `;
+        md += `| ${this.formatDate(entry.date)} `;
+        md += `| [${entry.id}. ${entry.title}](https://leetcode.com/problems/${entry.slug}) `;
+        md += `| ${topicBadges} `;
+        md += `| ${emoji} ${entry.difficulty} `;
+        md += `| [Solution](./${entry.solutionPath}) |\n`;
+      });
+      md += '\n';
+    }
+
+    // Hidden JSON data block for round-tripping
+    md += `${DATA_START}\n`;
+    md += JSON.stringify(data, null, 2) + '\n';
+    md += `${DATA_END}\n\n`;
+
+    md += TRACKING_END;
+    return md;
+  }
+
+  /**
+   * Updates the repo's root README.md with the dashboard and problem tracking table.
+   * This creates the 3rd commit after solution file and problem README.
+   */
+  async updateMainReadme(problemInfo: {
+    questionId: string;
+    title: string;
+    titleSlug: string;
+    difficulty: string;
+    topics: string[];
+    solutionPath: string;
+  }): Promise<void> {
+    try {
+      // Determine the root path (empty string = repo root, or subdirectory)
+      const rootPath = this.github_leetsync_subdirectory || '';
+
+      // Fetch current README.md
+      const existing = await this.fetchFileContent(rootPath, 'README.md');
+      let readmeContent = existing?.content || '';
+
+      // Today's date in YYYY-MM-DD format (for data storage)
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // Parse existing tracking data or initialize
+      let trackingData = this.parseTrackingData(readmeContent);
+
+      if (!trackingData) {
+        // First run — scan existing folders to get counts
+        console.log('📊 First run: scanning existing problems...');
+        const existingCounts = await this.countExistingProblems();
+
+        trackingData = {
+          goal: 300,
+          startDate: todayStr,
+          previousCount: existingCounts,
+          entries: [],
+        };
+      }
+
+      // Check for duplicate (same slug already tracked)
+      const alreadyTracked = trackingData.entries.some(
+        (e) => e.slug === problemInfo.titleSlug,
+      );
+
+      if (!alreadyTracked) {
+        // Prepend new entry (newest first)
+        const newEntry: ProblemEntry = {
+          id: problemInfo.questionId,
+          date: todayStr,
+          title: problemInfo.title,
+          slug: problemInfo.titleSlug,
+          topics: problemInfo.topics,
+          difficulty: problemInfo.difficulty,
+          solutionPath: problemInfo.solutionPath,
+        };
+        trackingData.entries.unshift(newEntry);
+      }
+
+      // Generate the new tracking section markdown
+      const trackingMarkdown = this.generateDashboardMarkdown(trackingData);
+
+      // Splice it into the README
+      const startIdx = readmeContent.indexOf(TRACKING_START);
+      const endIdx = readmeContent.indexOf(TRACKING_END);
+
+      if (startIdx !== -1 && endIdx !== -1) {
+        // Replace existing tracking section
+        readmeContent =
+          readmeContent.substring(0, startIdx) +
+          trackingMarkdown +
+          readmeContent.substring(endIdx + TRACKING_END.length);
+      } else {
+        // Append tracking section at the bottom
+        readmeContent = readmeContent.trimEnd() + '\n\n' + trackingMarkdown + '\n';
+      }
+
+      // Commit the updated README
+      const commitMsg = `Updated README - Solved ${problemInfo.title} on ${this.formatDate(todayStr)} 🎯 - LeetSync`;
+
+      // Use the upload method (handles create/update via SHA)
+      await this.upload(rootPath, 'README.md', readmeContent, commitMsg);
+
+      console.log('✅ Main README updated with dashboard and tracking table');
+    } catch (e) {
+      console.error('❌ Failed to update main README:', e);
+    }
+  }
+
   async submit(
     submission: Submission, //todo: define the submission type
   ): Promise<boolean> {
@@ -377,7 +760,20 @@ export default class GithubHandler {
         },
       },
     });
-    //create a new solution file with the code inside the folder
+
+    // 3rd commit: Update main README with dashboard and tracking table
+    const topicNames = question.topicTags?.map((t) => t.name) ?? [];
+    const solutionFilePath = `${basePath}/${question.titleSlug}${langExtension}`;
+
+    await this.updateMainReadme({
+      questionId: question.questionFrontendId ?? question.questionId ?? 'unknown',
+      title,
+      titleSlug,
+      difficulty,
+      topics: topicNames,
+      solutionPath: solutionFilePath,
+    });
+
     return true;
   }
 }
