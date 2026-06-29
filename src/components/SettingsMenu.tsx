@@ -266,7 +266,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = () => {
                     <FormHelperText fontSize={'xs'}>
                       You next submissions will be uploaded at{' '}
                       <Code fontSize="xs">
-                        {`3ba2ii/leetcode-problem-solving/${(subdirectory && trimSubdirectory(subdirectory)) || ''}`}
+                        {`${githubUsername}/${githubRepo}/${(subdirectory && trimSubdirectory(subdirectory)) || ''}`}
                       </Code>
                     </FormHelperText>
                   ) : (

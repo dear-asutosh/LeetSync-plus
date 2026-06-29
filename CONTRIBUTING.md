@@ -25,7 +25,7 @@ If you encounter any bugs or issues with GitLeet, please open an issue on the [G
 
 ## Suggesting Improvements
 
-If you have a suggestion for improving GitLeet, please open an issue on the [GitHub repository](https://github.com/3ba2ii/leet-sync/issues) with a clear description of your idea. Please provide as much detail as possible, including:
+If you have a suggestion for improving GitLeet, please open an issue on the [GitHub repository](https://github.com/dear-asutosh/GitLeet/issues) with a clear description of your idea. Please provide as much detail as possible, including:
 
 - The problem your suggestion solves
 - How your suggestion solves the problem

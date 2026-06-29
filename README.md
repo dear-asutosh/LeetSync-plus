@@ -43,7 +43,7 @@ To use GitLeet, follow these steps:
 
 ## Support
 
-If you encounter any issues or have any suggestions for improving GitLeet, please feel free to [open an issue](https://github.com/3ba2ii/leet-sync/issues) on the GitHub repository.
+If you encounter any issues or have any suggestions for improving GitLeet, please feel free to [open an issue](https://github.com/dear-asutosh/GitLeet/issues) on the GitHub repository.
 
 ## Contributing
 

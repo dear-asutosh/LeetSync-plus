@@ -9,7 +9,7 @@ export const Footer = () => {
         <Text
           as="a"
           color="blue.500"
-          href="https://github.com/3ba2ii/LeetSync/issues/new/choose"
+          href="https://github.com/dear-asutosh/GitLeet/issues/new/choose"
           target="_blank"
           fontWeight={'semibold'}
         >
@@ -19,12 +19,12 @@ export const Footer = () => {
         <Text
           as="a"
           color="blue.500"
-          href="https://github.com/3ba2ii"
+          href="https://github.com/dear-asutosh"
           target="_blank"
           fontWeight={'semibold'}
           display="inline-block"
         >
-          @3ba2ii
+          @dear-asutosh
         </Text>
       </Text>
     </HStack>
